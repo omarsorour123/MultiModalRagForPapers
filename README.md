@@ -1,83 +1,139 @@
-# Transformer Research Paper Processing & Retrieval-Augmented Generation (RAG) Pipeline
+# MultiModalRagForPapers
 
-This project demonstrates an end-to-end pipeline for processing research papers (PDFs) on Transformer architectures, extracting textual content, tables, and images, and then using large language models (LLMs) for summarization, retrieval, and question answering. The pipeline leverages multiple libraries and APIs including LangChain, VoyageAI, unstructured, and Google’s Generative AI to build a robust retrieval-augmented generation system.
+**MultiModalRagForPapers** is an advanced research paper processing and Retrieval-Augmented Generation (RAG) pipeline designed to extract, process, and analyze multimodal content—text, tables, and images—from research papers (PDFs). By leveraging latent summarization as a feature extraction mechanism, this system creates compact, semantically rich representations for downstream retrieval and question answering tasks.
+
+---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Requirements](#requirements)
+- [Key Features](#key-features)
+- [Technical Details](#technical-details)
+  - [PDF Partitioning and Element Extraction](#pdf-partitioning-and-element-extraction)
+  - [Latent Summarization as Feature Extraction](#latent-summarization-as-feature-extraction)
+  - [Multi-Modal Processing](#multi-modal-processing)
+  - [Vector Store Integration and RAG Pipeline](#vector-store-integration-and-rag-pipeline)
+  - [Evaluation Metrics and Methodology](#evaluation-metrics-and-methodology)
 - [Installation](#installation)
 - [Setup & Configuration](#setup--configuration)
 - [Usage](#usage)
-  - [PDF Processing & Element Extraction](#pdf-processing--element-extraction)
-  - [Summarization of Text and Tables](#summarization-of-text-and-tables)
-  - [Image Analysis with Captions](#image-analysis-with-captions)
-  - [Building the Vector Store & RAG Pipeline](#building-the-vector-store--rag-pipeline)
-  - [Evaluation Metrics](#evaluation-metrics)
+  - [Processing Research Papers](#processing-research-papers)
+  - [Summarization and Latent Feature Extraction](#summarization-and-latent-feature-extraction)
+  - [Retrieval and Question Answering](#retrieval-and-question-answering)
+  - [Evaluation](#evaluation)
 - [Contributing](#contributing)
 - [License](#license)
 
+---
+
 ## Overview
 
-This project processes a PDF (e.g., the "Attention Is All You Need" paper) by:
-- Extracting text, tables, and images using the [unstructured](https://github.com/Unstructured-IO/unstructured) library.
-- Summarizing extracted elements with LLMs (using models such as `voyage-3` via `langchain_voyageai` and `llama-3.2-90b-vision-preview`).
-- Using image analysis to extract information from figures with Google Generative AI.
-- Indexing summaries and raw elements in a vector store (Chroma) for retrieval-augmented question answering.
-- Evaluating the system using metrics like BLEU, ROUGE, and BERTScore.
+MultiModalRagForPapers processes research paper PDFs—such as landmark works on Transformer architectures—by extracting their text, tables, and images, then transforming these elements into latent representations via summarization. These latent features are embedded into a vector store to support efficient retrieval-augmented generation, enabling advanced Q&A and content analysis over the multimodal data.
 
-## Features
+---
 
-- **PDF Partitioning:** Breaks down research papers into coherent chunks based on titles and sections.
-- **Element Extraction:** Distinguishes between text, tables, and images, and extracts metadata such as coordinates and captions.
-- **Summarization:** Uses LLMs to generate concise summaries for each extracted element.
-- **Image Analysis:** Analyzes images by supplying both image data (as base64) and captions to generate detailed descriptions.
-- **Vector Store Integration:** Uses a multi-vector retrieval system (Chroma with an in-memory document store) to enable efficient retrieval-augmented generation.
-- **Evaluation:** Computes retrieval and generation evaluation metrics (precision, recall, BLEU, ROUGE-L, and BERTScore) against a sample dataset.
+## Key Features
 
-## Architecture
+- **Multi-Modal Data Extraction:**  
+  Extracts text, tables, and images from PDFs with fine-grained control over chunking and metadata preservation.
+  
+- **Advanced Element Processing:**  
+  Utilizes the [unstructured](https://github.com/Unstructured-IO/unstructured) library for enhanced table handling, image extraction (with base64 encoding), and text partitioning based on titles and other heuristics.
+  
+- **Latent Summarization:**  
+  Applies summarization chains that generate concise, latent feature representations for each extracted element (text, tables, images). These summaries capture key insights and serve as the semantic backbone for downstream retrieval.
+  
+- **Image Caption Analysis:**  
+  Processes images along with their captions using generative models (e.g., Google Generative AI via Gemini) to extract detailed analyses of diagrams, graphs, and annotated visual content.
+  
+- **Vector Store Integration:**  
+  Embeds latent summaries using `VoyageAIEmbeddings` (e.g., with the `voyage-3` model) into dense vector representations and indexes them in a Chroma vector store coupled with an in-memory document store for efficient multi-modal retrieval.
+  
+- **Retrieval-Augmented Generation:**  
+  Integrates latent features from text, tables, and images to answer complex queries by combining information across modalities.
+  
+- **Comprehensive Evaluation:**  
+  Evaluates the performance on texts, images, and tables both individually and in a multimodal setting using various metrics.
 
-1. **Input Processing:**  
-   - A PDF is processed via `unstructured.partition.pdf` with fine-tuned parameters for better image/table handling.
-   - The PDF is split into chunks that contain composite elements.
+---
 
-2. **Extraction & Summarization:**  
-   - Tables and texts are extracted along with their metadata.
-   - Summaries for text chunks and tables are generated using a prompt-driven LLM chain.
-   - Images are analyzed using a two-step process: image extraction and caption-based analysis via Google Generative AI.
+## Technical Details
 
-3. **Retrieval-Augmented Generation:**  
-   - Summaries and raw content are indexed into a vector store.
-   - A custom retrieval chain is built that combines both text and images.
-   - The chain is then used to answer queries based on the provided context.
+### PDF Partitioning and Element Extraction
 
-4. **Evaluation:**  
-   - A set of queries are processed to compute retrieval quality (precision and recall) and generation quality (BLEU, ROUGE, BERTScore).
+- **Advanced Chunking:**  
+  The system leverages `unstructured.partition.pdf` with parameters tuned for high-resolution extraction. This includes:
+  - **Granular Chunking:** Using strategies like `by_title` with custom character limits to maintain context coherence.
+  - **Metadata Extraction:** Capturing page numbers, coordinates, and element types to aid in subsequent processing and retrieval.
+  
+- **Element Differentiation:**  
+  Separates composite elements into:
+  - **Text Blocks:** Narrative and structured text.
+  - **Tables:** HTML representations enriched with adjacent captions.
+  - **Images:** Base64-encoded images along with metadata such as captions and visual coordinates.
 
-## Requirements
+### Latent Summarization as Feature Extraction
 
-- Python 3.8+
-- API Keys for:
-  - **Google Generative AI:** (set as `GOOGLE_API_KEY`)
-  - **VoyageAI, GROQ, LANGCHAIN:** (set corresponding environment variables)
-- Dependencies (see [Installation](#installation) section)
+- **Summarization Chains:**  
+  Each extracted element (text, table, or image) is processed through an LLM-driven summarization chain (e.g., via ChatGroq or ChatGoogleGenerativeAI).  
+- **Latent Features:**  
+  The summaries serve as latent features that capture the essential semantics and numerical relationships, making them ideal for downstream retrieval tasks.
+
+### Multi-Modal Processing
+
+- **Text:**  
+  Maintains essential numerical data and context, ensuring that summaries capture key findings and contributions.
+  
+- **Tables:**  
+  Converts tables into HTML representations with associated captions. Summaries focus on relational data, key metrics, and numerical insights.
+  
+- **Images:**  
+  Processes images by extracting their base64 strings and captions, then applies generative analysis to detail:
+  - Figure numbers and labels.
+  - Data flow, annotations, and color schemes.
+  - Mathematical formulas and architectural details.
+
+### Vector Store Integration and RAG Pipeline
+
+- **Embedding:**  
+  Latent summaries are embedded into dense vector representations using `VoyageAIEmbeddings`.
+  
+- **Vector Store:**  
+  Documents are indexed in a Chroma vector store integrated with an in-memory document store for efficient multi-modal retrieval.
+  
+- **Multi-Modal Retrieval:**  
+  A custom retriever combines latent features from all modalities, enabling complex queries to retrieve contextually relevant information from processed research papers.
+
+### Evaluation Metrics and Methodology
+
+- **Text Evaluation:**  
+  - **Synthetic Data:** Uses synthetic text-based queries and corresponding reference answers to evaluate text summarization and retrieval performance.
+  - **Metrics:** Precision, Recall, BLEU, ROUGE-L, and BERTScore are computed to assess semantic similarity and accuracy.
+  
+- **Images and Tables Evaluation:**  
+  - **Targeted Q&A:** Evaluation on images and tables is performed through dedicated question-answering tasks where queries are designed to be answered solely based on the visual or tabular data.
+  - **Metrics:** Similar metrics (BLEU, ROUGE-L, BERTScore) are used to evaluate the quality of the generated answers.
+  
+- **Multimodal Evaluation:**  
+  - **Combined Context:** In addition to individual evaluations, the system is tested on multimodal queries where the context comprises both texts and visual elements (images/tables).
+  - **Analysis:** This provides insights into how well the system integrates latent features from multiple modalities for coherent and accurate responses.
+
+---
 
 ## Installation
 
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/your-username/transformer-rag-pipeline.git
-   cd transformer-rag-pipeline
+   git clone https://github.com/omarsorour123/MultiModalRagForPapers.git
+   cd MultiModalRagForPapers
    ```
 
-2. **Create a Virtual Environment and Activate It:**
+2. **Create and Activate a Virtual Environment:**
 
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install Dependencies:**
@@ -86,78 +142,84 @@ This project processes a PDF (e.g., the "Attention Is All You Need" paper) by:
    pip install -r requirements.txt
    ```
 
-   > **Note:** Ensure that your `requirements.txt` includes libraries such as:
-   > - `langchain`
-   > - `unstructured`
-   > - `langchain_voyageai`
-   > - `langchain_google_genai`
-   > - `langchain_groq`
-   > - `chroma`
-   > - `evaluate`
-   > - `datasets`
-   > - `tenacity`
-   > - and any other dependency your code requires.
+---
 
 ## Setup & Configuration
 
-1. **Environment Variables:**  
-   Set up the following environment variables (e.g., in your shell profile or a `.env` file):
+- **Environment Variables:**  
+  Configure your environment (or create a `.env` file) with the following keys:
 
-   ```python
-   os.environ["GOOGLE_API_KEY"] = "your-google-api-key"
-   os.environ["GROQ_API_KEY"] = "your-groq-api-key"
-   os.environ["LANGCHAIN_API_KEY"] = "your-langchain-api-key"
-   os.environ["LANGCHAIN_TRACING_V2"] = "true"
-   ```
+  ```bash
+  export GOOGLE_API_KEY="your-google-api-key"
+  export GROQ_API_KEY="your-groq-api-key"
+  export LANGCHAIN_API_KEY="your-langchain-api-key"
+  export LANGCHAIN_TRACING_V2="true"
+  ```
 
-2. **API Keys:**  
-   Replace placeholder values with your actual API keys in the code as needed.
-
-## Usage
-
-### PDF Processing & Element Extraction
-
-- The code partitions a PDF (e.g., `attention_is_all_you_need.pdf`) using the `partition_pdf` function with custom parameters for:
-  - Improved table extraction.
-  - Granular chunking by titles.
-  - Metadata inclusion (e.g., page numbers, coordinates).
-
-### Summarization of Text and Tables
-
-- **Text Summarization:**  
-  A prompt template is used with a LLM (via ChatGroq) to generate concise summaries of text chunks.
-  
-- **Table Summarization:**  
-  Tables are processed similarly by extracting HTML representations and any associated captions before summarization.
-
-### Image Analysis with Captions
-
-- Images are processed by extracting the base64 string and caption.
-- A dedicated function sends the image (with caption) to the Gemini model (via `ChatGoogleGenerativeAI`) for detailed analysis.
-
-### Building the Vector Store & RAG Pipeline
-
-- Summaries and original elements are stored in a Chroma vector store.
-- A custom retrieval chain is built using a multi-vector retriever and an in-memory document store.
-- Queries are answered based on both textual and visual context retrieved from the vector store.
-
-### Evaluation Metrics
-
-- The pipeline includes an evaluation script that:
-  - Retrieves relevant context based on sample queries.
-  - Generates answers and evaluates them using:
-    - **Retrieval Metrics:** Precision and Recall (token-level matching).
-    - **Generation Metrics:** BLEU, ROUGE-L, and BERTScore (using Hugging Face’s `evaluate` library).
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request for improvements or bug fixes.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+- **API Keys:**  
+  Replace the placeholder values with your actual API keys in the scripts as needed.
 
 ---
 
-> **Disclaimer:** This README is provided as a starting point. Modify the instructions and sections as needed to better reflect your project’s structure, dependencies, and usage instructions.
+## Usage
+
+### Processing Research Papers
+
+- **PDF Extraction:**  
+  Place your research paper PDFs (e.g., `attention_is_all_you_need.pdf`) in the designated directory.  
+  Run the extraction script to partition the PDF into text, table, and image elements:
+
+  ```bash
+  python process_pdf.py
+  ```
+
+### Summarization and Latent Feature Extraction
+
+- **Generate Latent Summaries:**  
+  Each extracted element is summarized using LLM chains. The summaries are used as latent features that are embedded and indexed in the vector store.
+  
+- **Rate Limit Management:**  
+  The code includes delays (using `time.sleep()`) to accommodate API rate limits. Adjust these delays as necessary.
+
+### Retrieval and Question Answering
+
+- **Query Pipeline:**  
+  Use the provided query script to run multi-modal questions against the vector store:
+
+  ```bash
+  python query_pipeline.py
+  ```
+
+- **RAG Output:**  
+  The system retrieves the most relevant latent features and composes responses that integrate both textual and visual contexts.
+
+### Evaluation
+
+- **Individual Evaluations:**
+  - **Text:**  
+    Evaluation on synthetic text-based queries, comparing generated answers to reference answers using precision, recall, BLEU, ROUGE-L, and BERTScore.
+  - **Images and Tables:**  
+    Evaluation through targeted question-answering tasks where queries are designed specifically for images or tables. The answers are assessed using the same evaluation metrics.
+  
+- **Multimodal Evaluation:**  
+  For combined evaluation, queries that integrate both texts and visual elements are used to test the overall retrieval and generation performance.
+  
+- **Run Evaluation:**
+
+  ```bash
+  python evaluate.py
+  ```
+
+---
+
+## Contributing
+
+Contributions to improve processing algorithms, extend multimodal support, or enhance retrieval performance are welcome. Please open an issue or submit a pull request with your suggestions or fixes.
+
+---
+
+## License
+
+This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for details.
 ```
+
