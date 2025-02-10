@@ -112,21 +112,6 @@ MultiModalRagForPapers process research paper PDFs—such as the seminal "Attent
    cd MultiModalRagForPapers
    ```
 
-2. **Create and Activate a Virtual Environment:**
-
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install Dependencies:**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
----
-
 ## Setup & Configuration
 
 - **Environment Variables:**  
